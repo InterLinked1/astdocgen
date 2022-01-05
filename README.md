@@ -52,14 +52,22 @@ The result is a static HTML webpage with in-page CSS documenting all the applica
 
 One thing to be aware of is the generated HTML contains all the CSS needed, but currently this does not come with the logo or font resources (heh, maybe there are good legal reasons for this...). You can find the CSS resources on your own by poking around the Asterisk Wiki. Put the fonts and Asterisk logo in the `fonts` folder (and a favicon in the root folder if you wish), and you're good to go.
 
+Currently, `astdocgen` supports:
+- Applications
+- Functions
+- AMI Actions
+- AGI Commands
+- Modules
+
 Currently, `astdocgen` does not support:
 - xpointer, i.e. references to other XML files for documentation generation. As a result, some documentation, especially for modules, is sparser than in the Wiki.
 - AMI manager events, because the documentation for these solely consists of xpointers.
-- AGI, etc. documentation. Just haven't gotten around to it yet.
+- Config files, because the documentation for these solely consists of xpointers.
+- Info, which is mainly tech-specific `CHANNEL` function documentation.
 
 ## Bug Reporting
 
-It is very likely that there are some bugs in this software. **THIS SOFTWARE COMES WITH NO WARRANTY OR GUARANTEES.** I wrote it for my own needs in less than the course of a day and didn't do much afterwards besides some refactoring. If you notice an inconsistency between the way documentation is generated on the Asterisk wiki versus this tool, please report it. Pull requests are also welcome.
+It is very likely that there are some bugs in this software. **THIS SOFTWARE COMES WITH NO WARRANTY OR GUARANTEES.** If you notice an inconsistency between the way documentation is generated on the Asterisk wiki versus this tool, please report it. Pull requests are also welcome.
 
 The preferred issue reporting procedure is by cutting us a ticket at InterLinked Issues: https://issues.interlinked.us/
 
