@@ -67,6 +67,7 @@ $s = &$shortopts;
 $l = &$longopts;
 addopt($s, $l, "x", "xml", false, false);
 addopt($s, $l, "h", "html", false, false);
+addopt($s, $l, "p", "print", false, false);
 addopt($s, $l, "f", "file", true, true);
 addopt($s, $l, "s", "serialize", false, false);
 addopt($s, $l, "", "help", false, false);
@@ -75,12 +76,14 @@ $optXML = (isset($options['x']) || isset($options['xml']));
 $optHTML = (isset($options['h']) || isset($options['html']));
 $optFile = (isset($options['f']) || isset($options['file']));
 $optSerialize = (isset($options['s']) || isset($options['serialize']));
+$printr = (isset($options['p']) || isset($options['print']));
 $optHelp = isset($options['help']);
-if ($argc < 2 || $optHelp || (!$optXML && !$optHTML) || !$optFile) {
+if ($argc < 2 || $optHelp || (!$optXML && !$optHTML && !$printr) || !$optFile) {
 	printf("%s\n", "Usage: astdocgen [OPTION]... [FILE]...");
 	printf("%s\n\n", "Generate parseable or parsed documentation from Asterisk XML documentation.");
 	printf("  -%s, --%-15s %s\n", "f", "file", "Input file for XML array dump or HTML generation");
-	printf("  -%s, --%-15s %s\n", "h", "html", "Generate HTML from XML array dump and write to STDOUT");
+	printf("  -%s, --%-15s %s\n", "h", "html", "Generate HTML documentation from XML array dump and write to STDOUT");
+	printf("  -%s, --%-15s %s\n", "p", "print", "Generate HTML array dump from XML array dump and write to STDOUT");
 	printf("  -%s, --%-15s %s\n", "s", "serialize", "Serialize the generated XML array dump");
 	printf("  -%s, --%-15s %s\n", "x", "xml", "Generate array dump of XML from specified file and write to STDOUT");
 	printf("\n%s\n", "(C) PhreakNet, 2021");
@@ -112,13 +115,24 @@ if ($optXML) {
 	else
 		print_r($array);
 	fwrite(STDERR, PHP_EOL);
-	exit(2);
+	exit(0);
 }
 if ($optSerialize) {
 	fprintf(STDERR, "Serialize option is incompatible with HTML option" . PHP_EOL);
 	exit(2);
 }
 include($filename);
+if ($printr) { # HTML array dump
+	if (!isset($array) || !is_array($array)) {
+		fprintf(STDERR, "Array not found" . PHP_EOL);
+		exit(2);
+	}
+	fwrite(STDERR, "Dumping XML dump to HTML..." . PHP_EOL);
+	echo "<pre>";
+	print_r($array);
+	echo "</pre>";
+	exit(0);
+}
 fwrite(STDERR, "Generating HTML..." . PHP_EOL);
 
 echo "<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Asterisk Docs</title>";
@@ -214,10 +228,15 @@ body {
     list-style-type: none;
     padding-left: 10px;
 	background-color: #2c2c2c;
-	color: #b7b7b1;
 	margin-top: 0;
 	padding-top: 5px;
 	margin-bottom: 0;
+}
+#docmenu ul, #geninfo {
+	color: #b7b7b1;
+}
+#geninfo {
+	text-align: center;
 }
 table th, table td {
     border: 1px solid white;
@@ -277,10 +296,10 @@ $docs = $array['children'];
 $module = $docs['module'];
 $apps = $docs['application'];
 $funcs = $docs['function'];
-$info = $docs['info'];
+$info = $docs['info']; /*! \todo do something with info - these are all tech/channel related things */
 $manager = $docs['manager'];
-$managerevent = $docs['managerevent'];
-$configinfo = $docs['configinfo'];
+$managerevent = $docs['managerevent']; /*! \todo needs xpointer support */
+$configinfo = $docs['configinfo']; /*! \todo needs xpointer support */
 $agi = $docs['agi'];
 
 $allDocs = array(
@@ -288,6 +307,8 @@ $allDocs = array(
 	'Function' => $funcs,
 	'ManagerAction' => $manager,
 	'ManagerEvent' => $managerevent,
+	'AgiCommand' => $agi,
+	
 );
 
 echo "<div id='doctop'>";
@@ -308,6 +329,14 @@ foreach($allDocs as $catName => $cat) {
 	}
 }
 echo "</ul>";
+
+echo "<div id='geninfo'>";
+$version = shell_exec("/sbin/asterisk -V");
+echo "<p>$version</p>";
+$date = date("Y-m-d H:i");
+echo "<p>Generated $date</p>";
+echo "</div>";
+
 echo "<br><br><br>"; # otherwise, last few are hidden...
 echo "</div>";
 
@@ -340,7 +369,10 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 		$xData = $x['children'];
 		echo "<div class='doc-single' id='$afType-$xName'>";
 		$hyperlink = "https://wiki.asterisk.org/wiki/display/AST/Asterisk+18+${afTypeFull}_$xName";
-		echo "<h2><a href='$hyperlink' target='_blank'>$xName" . ($afType === "application" || $afType === "function" ? "()" : "") . "</a></h2>";
+		$title = $xName;
+		if ($afType === "agicommand")
+			$title = strtoupper($title);
+		echo "<h2><a href='$hyperlink' target='_blank'>$title" . ($afType === "application" || $afType === "function" ? "()" : "") . "</a></h2>";
 		echo "<h3>Synopsis</h3>";
 		if (isset($xData['synopsis'])) {
 			$synopsis = $xData['synopsis'][0]['text'];
@@ -408,22 +440,59 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 				echo "</ul>";
 			}
 		}
-		if (isset($xData['syntax'][0]['children']['parameter'])) {
+		if (isset($xData['syntax'][0]['children'])) {
 			$syntax = $xData['syntax'][0]['children'];
-			$parameters = $syntax['parameter'];
-			echo "<h3>Syntax</h3>";
 			# AMI stuff requires xpointer, not supported yet.
-			echo "<p class='syntaxbar'><code>$xName(";
-			$c = 0;
-			$optional = 0;
-			foreach ($parameters as $parameter) {
-				$argsep = ",";
-				if (isset($parameter['children']['argument'])) { # expand args
-					$argsep = (isset($parameter['attributes']['argsep']) ? $parameter['attributes']['argsep'] : ",");
-					foreach ($parameter['children']['argument'] as $argument) {
-						$argName = $argument['attributes']['name'];
-						$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
-						$multiple = (isset($argument['attributes']['multiple']) && $argument['attributes']['multiple'] === "true");
+			if ($afType === "agicommand") {
+				echo "<h3>Syntax</h3>";
+				echo "<p class='syntaxbar'><code>" . strtoupper($xName);
+				if (isset($syntax['parameter'])) {
+					foreach ($syntax['parameter'] as $parameter) {
+						if (isset($parameter['children']['argument'])) {
+							foreach ($parameter['children']['argument'] as $argument) {
+								$argName = $argument['attributes']['name'];
+								echo strtoupper($argName);
+							}
+						} else {
+							$argName = $parameter['attributes']['name'];
+							echo " " . strtoupper($argName);
+						}
+					}
+				}
+				echo "</code></p>";
+			} else if (isset($xData['syntax'][0]['children']['parameter'])) { # apps/funcs...
+				$parameters = $syntax['parameter'];
+				echo "<h3>Syntax</h3>";
+				echo "<p class='syntaxbar'><code>$xName(";
+				$c = 0;
+				$optional = 0;
+				foreach ($parameters as $parameter) {
+					$argsep = ",";
+					if (isset($parameter['children']['argument'])) { # expand args
+						$argsep = (isset($parameter['attributes']['argsep']) ? $parameter['attributes']['argsep'] : ",");
+						foreach ($parameter['children']['argument'] as $argument) {
+							$argName = $argument['attributes']['name'];
+							$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
+							$multiple = (isset($argument['attributes']['multiple']) && $argument['attributes']['multiple'] === "true");
+							if (!$argRequired)
+								$optional++;
+							if ($c > 0)
+								echo $argsep;
+							if (!$argRequired)
+								echo "[";
+							else
+								echo str_repeat("]", $optional);
+							echo $argName;
+							if ($multiple) {
+								echo "[$argsep...]]"; # to match how the Asterisk wiki formats it
+							}
+							if ($argRequired)
+								$optional = 0;
+							$c++;
+						}
+					} else { /* this is for both options and other arguments */
+						$argName = $parameter['attributes']['name'];
+						$argRequired = (isset($parameter['attributes']['required']) && $parameter['attributes']['required'] === "true");
 						if (!$argRequired)
 							$optional++;
 						if ($c > 0)
@@ -433,32 +502,14 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 						else
 							echo str_repeat("]", $optional);
 						echo $argName;
-						if ($multiple) {
-							echo "[$argsep...]]"; # to match how the Asterisk wiki formats it
-						}
 						if ($argRequired)
 							$optional = 0;
 						$c++;
 					}
-				} else { /* this is for both options and other arguments */
-					$argName = $parameter['attributes']['name'];
-					$argRequired = (isset($parameter['attributes']['required']) && $parameter['attributes']['required'] === "true");
-					if (!$argRequired)
-						$optional++;
-					if ($c > 0)
-						echo $argsep;
-					if (!$argRequired)
-						echo "[";
-					else
-						echo str_repeat("]", $optional);
-					echo $argName;
-					if ($argRequired)
-						$optional = 0;
-					$c++;
 				}
+				echo str_repeat("]", $optional);
+				echo ")</code></p>";
 			}
-			echo str_repeat("]", $optional);
-			echo ")</code></p>";
 			echo "<h4>Arguments</h4>";
 			echo "<ul>";
 			foreach ($parameters as $parameter) {
@@ -644,6 +695,9 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 						break;
 					case 'managerEvent':
 						$linkName = "ManagerEvent";
+						break;
+					case 'agi':
+						$linkName = "AgiCommand";
 						break;
 					default:
 						break;
