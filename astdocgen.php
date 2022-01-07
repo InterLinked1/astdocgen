@@ -510,161 +510,127 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 				echo str_repeat("]", $optional);
 				echo ")</code></p>";
 			}
-			echo "<h4>Arguments</h4>";
-			echo "<ul>";
-			foreach ($parameters as $parameter) {
-				$paramName = $parameter['attributes']['name'];
-				$param = $parameter['children'];
-				echo "<li><code>$paramName</code>";
-				if (isset($param['argument'])) {
-					echo "<ul>";
-					foreach ($param['argument'] as $argument) {
-						$argName = $argument['attributes']['name'];
-						$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
-						echo "<li><code>$argName</code>";
-						if (isset($argument['children']['para'][0]['text'])) {
-							echo " - ";
-							foreach ($argument['children']['para'] as $para) {
-								echo $para['text'] . "<br>";
-							}
-						}
-						echo "</li>";
-					}
-					echo "</ul>";
-				} else if (isset($param['optionlist'])) {
-					echo "<ul>";
-					foreach ($param['optionlist'][0]['children']['option'] as $option) {
-						$optName = $option['attributes']['name'];
-						$argsep = (isset($option['attributes']['argsep']) ? $option['attributes']['argsep'] : " <ERROR> ");
-						$optRequired = (isset($option['attributes']['required']) && $option['attributes']['required'] === "true");
-						echo "<li><code>$optName";
-						if (isset($option['children']['argument'][0]['attributes']['name'])) {
-							echo "( ";
-							$c = 0;
-							foreach ($option['children']['argument'] as $arg) {
-								if ($c > 0)
-									echo $argsep;
-								$argRequired = (isset($arg['attributes']['required']) && $arg['attributes']['required'] === "true");
-								if ($argRequired)
-									echo "<b>";
-								echo $arg['attributes']['name'];
-								if ($argRequired)
-									echo "</b>";
-								$c++;
-							}
-							echo " )";
-						}
-						echo "</code>";
-						if (isset($option['children']['para'][0]['text'])) {
-							echo " - ";
-							foreach ($option['children']['para'] as $para) {
-								echo $para['text'] . "<br>";
-							}
-						}
-						if (isset($option['children']['variablelist'][0]['children']['variable'])) {
-							echo "<ul>";
-							foreach ($option['children']['variablelist'][0]['children']['variable'] as $var) {
-								$varName = $var['attributes']['name'];
-								echo "<li><code>$varName</code>";
-								if (isset($var['children']['para'])) {
-									echo " - ";
-									foreach ($var['children']['para'] as $para) {
-										echo $para['text'] . "<br>";
-									}
-								}
-								if (isset($var['children']['value'])) {
-									echo "<ul>";
-									foreach ($var['children']['value'] as $value) {
-										$valueName = trim($value['attributes']['name']);
-										$default = isset($value['attributes']['default']);
-										$valueName = htmlspecialchars($valueName);
-										echo "<li>" . strtoupper($valueName) . (strlen($value['text']) > 0 ? " - " . $value['text'] : '');
-										if ($default)
-											echo " default: (true)";
-										echo "</li>";
-									}
-									echo "</ul>";
-								}
-								echo "</li>";
-							}
-							echo "</ul>";
-						}
-						if (isset($option['children']['argument'])) {
-							echo "<ul>";
-							foreach ($option['children']['argument'] as $argument) {
-								$argName = $argument['attributes']['name'];
-								$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
-								$argParams = (isset($argument['attributes']['hasparams']) && $argument['attributes']['required'] === "true");
-								$argsep = (isset($argument['attributes']['argsep']) ? $argument['attributes']['argsep'] : " <ERROR> ");
-								echo "<li><code>";
-								if ($argRequired)
-									echo "<b>";
-								echo $argName;
-								if ($argRequired)
-									echo "</b>";
-								if ($argParams)
-									echo "( params )";
-								echo "</code>";
-								if (isset($argument['children']['para'][0]['text'])) {
-									echo " - ";
-									foreach ($argument['children']['para'] as $para) {
-										echo $para['text'] . "<br>";
-									}
-								}
-								if (isset($argument['children']['argument'][0])) {
-									echo "<ul>";
-									foreach ($argument['children']['argument'] as $subarg) {
-										$subargName = $subarg['attributes']['name'];
-										$multiple = (isset($subarg['attributes']['required']) && $subarg['attributes']['required'] === "true");
-										$argRequired = (isset($subarg['attributes']['required']) && $subarg['attributes']['required'] === "true");
-										echo "<li><code>";
-										if ($argRequired)
-											echo "<b>";
-										echo $subargName;
-										if ($argRequired)
-											echo "</b>";
-										if ($multiple) {
-											echo "[$argsep$subargName...]";
-										}
-										echo "</code></li>";
-									}
-									echo "</ul>";
-								}
-								echo "</li>";
-							}
-							echo "</ul>";
-						}
-						echo "</li>";
-					}
-					echo "</ul>";
-				} else if (isset($param['para'][0])) {
-					echo " - ";
-					foreach ($param['para'] as $para) {
-						echo $para['text'] . "<br>";
-					}
-					if (isset($param['enumlist'][0]['children']['enum'])) { # xpointer not supported at this time
+			if (isset($syntax['parameter'])) {
+				echo "<h4>Arguments</h4>";
+				echo "<ul>";
+				$parameters = $syntax['parameter'];
+				foreach ($parameters as $parameter) {
+					$paramName = $parameter['attributes']['name'];
+					$param = $parameter['children'];
+					echo "<li><code>$paramName</code>";
+					if (isset($param['argument'])) {
 						echo "<ul>";
-						foreach ($param['enumlist'][0]['children']['enum'] as $enum) {
-							echo "<li><code>";
-							echo $enum['attributes']['name'];
-							echo "</code>";
-							if (isset($enum['children']['para'][0]['text'])) {
+						foreach ($param['argument'] as $argument) {
+							$argName = $argument['attributes']['name'];
+							$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
+							echo "<li><code>$argName</code>";
+							if (isset($argument['children']['para'][0]['text'])) {
 								echo " - ";
-								foreach ($enum['children']['para'] as $para) {
+								foreach ($argument['children']['para'] as $para) {
 									echo $para['text'] . "<br>";
 								}
 							}
-							if (isset($enum['children']['enumlist'])) {
+							echo "</li>";
+						}
+						echo "</ul>";
+					} else if (isset($param['optionlist'])) {
+						echo "<ul>";
+						foreach ($param['optionlist'][0]['children']['option'] as $option) {
+							$optName = $option['attributes']['name'];
+							$argsep = (isset($option['attributes']['argsep']) ? $option['attributes']['argsep'] : " <ERROR> ");
+							$optRequired = (isset($option['attributes']['required']) && $option['attributes']['required'] === "true");
+							echo "<li><code>$optName";
+							if (isset($option['children']['argument'][0]['attributes']['name'])) {
+								echo "( ";
+								$c = 0;
+								foreach ($option['children']['argument'] as $arg) {
+									if ($c > 0)
+										echo $argsep;
+									$argRequired = (isset($arg['attributes']['required']) && $arg['attributes']['required'] === "true");
+									if ($argRequired)
+										echo "<b>";
+									echo $arg['attributes']['name'];
+									if ($argRequired)
+										echo "</b>";
+									$c++;
+								}
+								echo " )";
+							}
+							echo "</code>";
+							if (isset($option['children']['para'][0]['text'])) {
+								echo " - ";
+								foreach ($option['children']['para'] as $para) {
+									echo $para['text'] . "<br>";
+								}
+							}
+							if (isset($option['children']['variablelist'][0]['children']['variable'])) {
 								echo "<ul>";
-								foreach ($enum['children']['enumlist'][0]['children']['enum'] as $enum2) {
-									echo "<li><code>";
-									echo $enum2['attributes']['name'];
-									echo "</code>";
-									if (isset($enum2['children']['para'][0]['text'])) {
+								foreach ($option['children']['variablelist'][0]['children']['variable'] as $var) {
+									$varName = $var['attributes']['name'];
+									echo "<li><code>$varName</code>";
+									if (isset($var['children']['para'])) {
 										echo " - ";
-										foreach ($enum2['children']['para'] as $para) {
+										foreach ($var['children']['para'] as $para) {
 											echo $para['text'] . "<br>";
 										}
+									}
+									if (isset($var['children']['value'])) {
+										echo "<ul>";
+										foreach ($var['children']['value'] as $value) {
+											$valueName = trim($value['attributes']['name']);
+											$default = isset($value['attributes']['default']);
+											$valueName = htmlspecialchars($valueName);
+											echo "<li>" . strtoupper($valueName) . (strlen($value['text']) > 0 ? " - " . $value['text'] : '');
+											if ($default)
+												echo " default: (true)";
+											echo "</li>";
+										}
+										echo "</ul>";
+									}
+									echo "</li>";
+								}
+								echo "</ul>";
+							}
+							if (isset($option['children']['argument'])) {
+								echo "<ul>";
+								foreach ($option['children']['argument'] as $argument) {
+									$argName = $argument['attributes']['name'];
+									$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
+									$argParams = (isset($argument['attributes']['hasparams']) && $argument['attributes']['required'] === "true");
+									$argsep = (isset($argument['attributes']['argsep']) ? $argument['attributes']['argsep'] : " <ERROR> ");
+									echo "<li><code>";
+									if ($argRequired)
+										echo "<b>";
+									echo $argName;
+									if ($argRequired)
+										echo "</b>";
+									if ($argParams)
+										echo "( params )";
+									echo "</code>";
+									if (isset($argument['children']['para'][0]['text'])) {
+										echo " - ";
+										foreach ($argument['children']['para'] as $para) {
+											echo $para['text'] . "<br>";
+										}
+									}
+									if (isset($argument['children']['argument'][0])) {
+										echo "<ul>";
+										foreach ($argument['children']['argument'] as $subarg) {
+											$subargName = $subarg['attributes']['name'];
+											$multiple = (isset($subarg['attributes']['required']) && $subarg['attributes']['required'] === "true");
+											$argRequired = (isset($subarg['attributes']['required']) && $subarg['attributes']['required'] === "true");
+											echo "<li><code>";
+											if ($argRequired)
+												echo "<b>";
+											echo $subargName;
+											if ($argRequired)
+												echo "</b>";
+											if ($multiple) {
+												echo "[$argsep$subargName...]";
+											}
+											echo "</code></li>";
+										}
+										echo "</ul>";
 									}
 									echo "</li>";
 								}
@@ -673,9 +639,46 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 							echo "</li>";
 						}
 						echo "</ul>";
+					} else if (isset($param['para'][0])) {
+						echo " - ";
+						foreach ($param['para'] as $para) {
+							echo $para['text'] . "<br>";
+						}
+						if (isset($param['enumlist'][0]['children']['enum'])) { # xpointer not supported at this time
+							echo "<ul>";
+							foreach ($param['enumlist'][0]['children']['enum'] as $enum) {
+								echo "<li><code>";
+								echo $enum['attributes']['name'];
+								echo "</code>";
+								if (isset($enum['children']['para'][0]['text'])) {
+									echo " - ";
+									foreach ($enum['children']['para'] as $para) {
+										echo $para['text'] . "<br>";
+									}
+								}
+								if (isset($enum['children']['enumlist'])) {
+									echo "<ul>";
+									foreach ($enum['children']['enumlist'][0]['children']['enum'] as $enum2) {
+										echo "<li><code>";
+										echo $enum2['attributes']['name'];
+										echo "</code>";
+										if (isset($enum2['children']['para'][0]['text'])) {
+											echo " - ";
+											foreach ($enum2['children']['para'] as $para) {
+												echo $para['text'] . "<br>";
+											}
+										}
+										echo "</li>";
+									}
+									echo "</ul>";
+								}
+								echo "</li>";
+							}
+							echo "</ul>";
+						}
 					}
+					echo "</li>";
 				}
-				echo "</li>";
 			}
 			echo "</ul>";
 		}
