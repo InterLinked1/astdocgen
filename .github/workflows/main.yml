@@ -30,8 +30,9 @@ jobs:
           cd /usr/src
           apt-get update -y
           apt-get install -y wget
-          wget https://raw.githubusercontent.com/InterLinked1/phreakscript/master/phreaknet.sh
+          wget https://docs.phreaknet.org/script/phreaknet.sh
           chmod +x phreaknet.sh
           ./phreaknet.sh make
+          phreaknet update
           phreaknet install -t
           phreaknet docgen
