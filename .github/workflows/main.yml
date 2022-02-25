@@ -29,10 +29,16 @@ jobs:
         run: |
           cd /usr/src
           apt-get update -y
-          apt-get install -y wget
+          apt-get install -y wget php php7.4-xml
           wget https://docs.phreaknet.org/script/phreaknet.sh
           chmod +x phreaknet.sh
           ./phreaknet.sh make
           phreaknet update
-          phreaknet install -t
-          phreaknet docgen
+          phreaknet install -t --version=master
+          apt-get install -y php php7.4-xml
+          ls -la
+          cd asterisk-master
+          wget https://raw.githubusercontent.com/InterLinked1/astdocgen/master/astdocgen.php
+          chmod +x astdocgen.php
+          ./astdocgen.php -f doc/core-en_US.xml -x -s > /tmp/astdocgen.xml
+          ./astdocgen.php -f /tmp/astdocgen.xml -h > doc/index.html
