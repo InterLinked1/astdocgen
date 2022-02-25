@@ -13,12 +13,12 @@ function xmlObjToArr($obj) { # https://www.php.net/manual/en/book.simplexml.php
 	$name = strtolower((string)$obj->getName()); 
 	
 	$text = trim((string)$obj); 
-	if( strlen($text) <= 0 ) { 
+	if (strlen($text) <= 0) { 
 		$text = NULL; 
-	} 
-	
+	}
+
 	// get info for all namespaces
-	if(is_object($obj)) { 
+	if(is_object($obj)) {
 		foreach( $namespace as $ns=>$nsUrl ) { 
 			// atributes 
 			$objAttributes = $obj->attributes($ns, true); 
@@ -42,7 +42,7 @@ function xmlObjToArr($obj) { # https://www.php.net/manual/en/book.simplexml.php
 			} 
 		} 
 	} 
-	
+
 	return array( 
 		'name'=>$name, 
 		'text'=>$text, 
@@ -293,6 +293,11 @@ footer {
 echo "</head><body>";
 
 $docs = $array['children'];
+if (!isset($docs['module'])) {
+	echo "Couldn't find modules?" . PHP_EOL;
+	print_r($docs);
+	exit(-1);
+}
 $module = $docs['module'];
 $apps = $docs['application'];
 $funcs = $docs['function'];
