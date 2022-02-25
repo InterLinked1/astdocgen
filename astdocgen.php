@@ -293,12 +293,12 @@ footer {
 echo "</head><body>";
 
 $docs = $array['children'];
-if (!isset($docs['module'])) {
-	fprintf(STDERR, "Couldn't find modules?\n");
-	fprintf(STDERR, "%s\n", print_r($docs, true));
+if (!isset($docs['application'])) {
+	fprintf(STDERR, "Couldn't find application?\n");
+	fprintf(STDERR, "%s\n", print_r(array_keys($docs), true));
 	exit(-1);
 }
-$module = $docs['module'];
+$module = isset($docs['module']) ? $docs['module'] : array();
 $apps = $docs['application'];
 $funcs = $docs['function'];
 $info = $docs['info']; /*! \todo do something with info - these are all tech/channel related things */
