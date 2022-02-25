@@ -295,7 +295,7 @@ echo "</head><body>";
 $docs = $array['children'];
 if (!isset($docs['module'])) {
 	fprintf(STDERR, "Couldn't find modules?\n");
-	fprintf(STDERR, print_r($docs, true));
+	fprintf(STDERR, "%s\n", print_r($docs, true));
 	exit(-1);
 }
 $module = $docs['module'];
