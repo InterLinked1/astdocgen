@@ -649,37 +649,17 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 						foreach ($param['para'] as $para) {
 							echo $para['text'] . "<br>";
 						}
+						/*
+						 * as demonstrated by func_frame_drop, the current method of XML parsing has some serious disadvantages, namely that order is not
+						 * preserved in any way. So if we have para, enumlist, para, enumlist (as in FRAME_DROP), then we get para, para, enumlist, enumlist,
+						 * or enumlist, enumlist, para, para, neither of which makes any sense.
+						 * However, until we have a better, improved way of XML parsing that preserves order, we should at least check for multiple children.
+						 * Eventually, once we have an order-preserving parse, we can just call a callback function to print out each kind of element.
+						 */
 						if (isset($param['enumlist'][0]['children']['enum'])) { # xpointer not supported at this time
-							echo "<ul>";
-							foreach ($param['enumlist'][0]['children']['enum'] as $enum) {
-								echo "<li><code>";
-								echo $enum['attributes']['name'];
-								echo "</code>";
-								if (isset($enum['children']['para'][0]['text'])) {
-									echo " - ";
-									foreach ($enum['children']['para'] as $para) {
-										echo $para['text'] . "<br>";
-									}
-								}
-								if (isset($enum['children']['enumlist'])) {
-									echo "<ul>";
-									foreach ($enum['children']['enumlist'][0]['children']['enum'] as $enum2) {
-										echo "<li><code>";
-										echo $enum2['attributes']['name'];
-										echo "</code>";
-										if (isset($enum2['children']['para'][0]['text'])) {
-											echo " - ";
-											foreach ($enum2['children']['para'] as $para) {
-												echo $para['text'] . "<br>";
-											}
-										}
-										echo "</li>";
-									}
-									echo "</ul>";
-								}
-								echo "</li>";
+							foreach ($param['enumlist'] as $enumlist) {
+								print_enum_list($enumlist);
 							}
-							echo "</ul>";
 						}
 					}
 					echo "</li>";
@@ -722,6 +702,27 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 		echo "</div><hr>";
 		echo PHP_EOL;
 	}
+}
+function print_enum_list(array $enumlist) {
+	echo "<ul>";
+	foreach ($enumlist['children']['enum'] as $enum) {
+		echo "<li><code>";
+		echo $enum['attributes']['name'];
+		echo "</code>";
+		if (isset($enum['children']['para'][0]['text'])) {
+			echo " - ";
+			foreach ($enum['children']['para'] as $para) {
+				echo $para['text'] . "<br>";
+			}
+		}
+		if (isset($enum['children']['enumlist'])) {
+			foreach ($enum['children']['enumlist'] as $enumlist) {
+				print_enum_list($enumlist);
+			}
+		}
+		echo "</li>";
+	}
+	echo "</ul>";
 }
 echo "</div></div></body></html>";
 ?>
