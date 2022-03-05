@@ -641,6 +641,12 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 								}
 								echo "</ul>";
 							}
+							/* options can contain an enumlist */
+							if (isset($option['children']['enumlist'])) {
+								foreach ($option['children']['enumlist'] as $enumlist) {
+									print_enum_list($enumlist);
+								}
+							}
 							echo "</li>";
 						}
 						echo "</ul>";
@@ -653,6 +659,7 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 						 * as demonstrated by func_frame_drop, the current method of XML parsing has some serious disadvantages, namely that order is not
 						 * preserved in any way. So if we have para, enumlist, para, enumlist (as in FRAME_DROP), then we get para, para, enumlist, enumlist,
 						 * or enumlist, enumlist, para, para, neither of which makes any sense.
+						 * (That is, order within a type, such as para or enum, is preserved, but not amongst them all interspersed together)
 						 * However, until we have a better, improved way of XML parsing that preserves order, we should at least check for multiple children.
 						 * Eventually, once we have an order-preserving parse, we can just call a callback function to print out each kind of element.
 						 */
