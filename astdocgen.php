@@ -180,6 +180,11 @@ literal, variable {
 	background-color: #00090fdb;
 	padding: 10px;
 }
+.warning {
+	border: 0.5px solid maroon;
+	background-color: #00090fdb;
+	padding: 10px;
+}
 .example {
 	padding: 15px;
 	padding-left: 25px;
@@ -396,6 +401,15 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 				foreach ($description['note'] as $note) {
 					echo "<div class='note'>";
 					foreach ($note['children']['para'] as $para) {
+						echo "<p>" . $para['text'] . "</p>";
+					}
+					echo "</div>";
+				}
+			}
+			if (isset($description['warning'])) {
+				foreach ($description['warning'] as $warning) {
+					echo "<div class='warning'>";
+					foreach ($warning['children']['para'] as $para) {
 						echo "<p>" . $para['text'] . "</p>";
 					}
 					echo "</div>";
