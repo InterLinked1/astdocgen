@@ -25,7 +25,7 @@ Your resulting webpage may be different if your Asterisk source contains differe
 
 ### Automated Usage (recommended)
 
-Use [PhreakScript](https://github.com/InterLinked1/phreakscript) - simply run `phreaknet docgen`. It will automatically any pre-requisites and generate documentation using the latest version of `astdocgen`.
+Use [PhreakScript](https://github.com/InterLinked1/phreakscript) - simply run `phreaknet docgen`. It will automatically install any pre-requisites and generate documentation using the latest version of `astdocgen`.
 
 ### Manual Usage
 
