@@ -313,6 +313,7 @@ $configinfo = $docs['configinfo']; /*! \todo needs xpointer support */
 $agi = $docs['agi'];
 
 $allDocs = array(
+	'Configuration' => $configinfo,
 	'Application' => $apps,
 	'Function' => $funcs,
 	'ManagerAction' => $manager,
@@ -385,7 +386,12 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 		echo "<h3>Synopsis</h3>";
 		if (isset($xData['synopsis'])) {
 			$synopsis = $xData['synopsis'][0]['text'];
-			echo "<p>$synopsis</p>";
+			if ($afType === "configuration") {
+				echo "<h3>$synopsis</h3>";
+				echo "<p>This configuration documentation is for functionality provided by <code>$xName</code>.</p>";
+			} else {
+				echo "<p>$synopsis</p>";
+			}
 		}
 		echo "<h3>Description</h3>";
 		if (isset($xData['description'][0]['children'])) {
@@ -686,6 +692,35 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 				}
 			}
 			echo "</ul>";
+		}
+		if (isset($xData['configfile'])) {
+			echo "<h3>Configuration Option Reference</h3>";
+			foreach ($xData['configfile'] as $cf) {
+				$cfName = $cf['attributes']['name'];
+				echo "<h3>$cfName</h3>";
+				foreach ($cf['children']['configobject'] as $configobj) {
+					$coName = $configobj['attributes']['name'];
+					echo "<h4>$coName</h4>";
+					if (isset($configobj['children']['synopsis'])) {
+						echo "<p>" . $configobj['children']['synopsis'][0]['text'] . "</p>";
+					}
+					if (isset($configobj['children']['configoption'])) {
+						echo "<table>";
+						echo "<tr><th>Option Name</th><th>Type</th><th>Default Value</th><th>Regular Expression</th><th>Description</th></tr>";
+						foreach ($configobj['children']['configoption'] as $cfgOpt) {
+							echo "<tr>";
+							echo "<td>" . $cfgOpt['attributes']['name'] . "</td>";
+							/*! \todo XML array doesn't contain these attributes? */
+							echo "<td></td>";
+							echo "<td></td>";
+							echo "<td></td>";
+							echo "<td>" . $cfgOpt['children']['synopsis'][0]['text'] . "</td>";
+							echo "</tr>";
+						}
+						echo "</table>";
+					}
+				}
+			}
 		}
 		if (isset($xData['see-also'][0])) {
 			echo "<h3>See Also</h3>";
