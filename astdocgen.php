@@ -318,7 +318,6 @@ $allDocs = array(
 	'ManagerAction' => $manager,
 	'ManagerEvent' => $managerevent,
 	'AgiCommand' => $agi,
-	
 );
 
 echo "<div id='doctop'>";
@@ -450,7 +449,7 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 						foreach ($variable['children']['value'] as $varvalue) {
 							$vvName = $varvalue['attributes']['name'];
 							$vvText = $varvalue['text'];
-							echo "<li>$vvName" . (strlen($vvText) > 0 ? " - " . $vvText : "") . "</li>";
+							echo "<li>$vvName" . ($vvText && strlen($vvText) > 0 ? " - " . $vvText : "") . "</li>";
 						}
 						echo "</ul>";
 					}
@@ -599,7 +598,7 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 											$valueName = trim($value['attributes']['name']);
 											$default = isset($value['attributes']['default']);
 											$valueName = htmlspecialchars($valueName);
-											echo "<li>" . strtoupper($valueName) . (strlen($value['text']) > 0 ? " - " . $value['text'] : '');
+											echo "<li>" . strtoupper($valueName) . ($value['text'] && strlen($value['text']) > 0 ? " - " . $value['text'] : '');
 											if ($default)
 												echo " default: (true)";
 											echo "</li>";
