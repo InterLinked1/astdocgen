@@ -58,11 +58,12 @@ Currently, `astdocgen` supports:
 - AMI Actions
 - AGI Commands
 - Modules
+- Config files (for the most part, see below)
 
 Currently, `astdocgen` does not support:
 - xpointer, i.e. references to other XML files for documentation generation. As a result, some documentation, especially for modules, is sparser than in the Wiki.
 - AMI manager events, because the documentation for these solely consists of xpointers.
-- Config files, because the documentation for these solely consists of xpointers.
+- Config files: Type, Default Value, and Regular Expression columns aren't processed
 - Info, which is mainly tech-specific `CHANNEL` function documentation.
 
 ## Bug Reporting
