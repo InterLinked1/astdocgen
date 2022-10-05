@@ -133,6 +133,11 @@ if ($printr) { # HTML array dump
 	echo "</pre>";
 	exit(0);
 }
+
+if (!isset($array) || !is_array($array)) {
+	fprintf(STDERR, "Specified input file does not contain XML dump" . PHP_EOL);
+	exit(2);
+}
 fwrite(STDERR, "Generating HTML..." . PHP_EOL);
 
 echo "<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Asterisk Docs</title>";
