@@ -1,5 +1,9 @@
 #!/usr/bin/php
 <?php
+$skipList = array(); # Add app/func names, etc. to this array to skip them in the documentation. End with * to match all names starting with a prefix.
+if (file_exists('astdocgen_exclusions.php')) {
+	include('astdocgen_exclusions.php');
+}
 function exception_error_handler($errno, $errstr, $errfile, $errline ) {
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 }
@@ -7,11 +11,11 @@ set_error_handler("exception_error_handler"); # stop the script as soon as anyth
 function xmlObjToArr($obj) { # https://www.php.net/manual/en/book.simplexml.php
 	$namespace = $obj->getDocNamespaces(true); 
 	$namespace[NULL] = NULL; 
-	
+
 	$children = array(); 
 	$attributes = array(); 
 	$name = strtolower((string)$obj->getName()); 
-	
+
 	$text = trim((string)$obj); 
 	if (strlen($text) <= 0) { 
 		$text = NULL; 
@@ -30,7 +34,7 @@ function xmlObjToArr($obj) { # https://www.php.net/manual/en/book.simplexml.php
 				} 
 				$attributes[$attribName] = $attribVal; 
 			} 
-			
+
 			// children 
 			$objChildren = $obj->children($ns, true); 
 			foreach( $objChildren as $childName=>$child ) { 
@@ -302,6 +306,26 @@ footer {
 ";
 echo "</head><body>";
 
+function shouldSkip($name) {
+	global $skipList;
+	if (in_array($name, $skipList)) {
+		return true;
+	}
+	if (PHP_VERSION_ID >= 80000) { # str_starts_with only exists in PHP 8
+		$match = false;
+		foreach ($skipList as $s) {
+			$lastChar = substr($s, -1);
+			if ($lastChar === '*') {
+				$prefix = substr($s, 0, -1);
+				if (str_starts_with($name, $prefix)) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 $docs = $array['children'];
 if (!isset($docs['application'])) {
 	fprintf(STDERR, "Couldn't find application?\n");
@@ -336,6 +360,9 @@ foreach($allDocs as $catName => $cat) {
 	$catList = array();
 	foreach ($cat as $c) {
 		$name = $c['attributes']['name'];
+		if (shouldSkip($name)) {
+			continue;
+		}
 		$catList["$name"] = strtolower($catName) . "-" . $name;
 	}
 	ksort($catList);
@@ -359,6 +386,9 @@ echo "<div id='docbody'>";
 echo "<table><tr><th>Module</th><th>Support Level</th><th>Deprecated In</th><th>Removed In</th><th>Dependencies</th></tr>";
 foreach ($module as $mod) {
 	$name = $mod['attributes']['name'];
+	if (shouldSkip($name)) {
+		continue;
+	}
 	$dependencies = array();
 	$supportLevel = (isset($mod['children']['support_level'][0]['text']) ? $mod['children']['support_level'][0]['text'] : '');
 	$deprecated = (isset($mod['children']['deprecated_in'][0]['text']) ? $mod['children']['deprecated_in'][0]['text'] : '');
@@ -380,6 +410,10 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 	foreach ($appfunc as $x) {
 		$afType = strtolower($afTypeFull);
 		$xName = $x['attributes']['name'];
+		if (shouldSkip($xName)) {
+			fwrite(STDERR, "Skipping $afType $xName..." . PHP_EOL);
+			continue;
+		}
 		fwrite(STDERR, "Processing $afType $xName..." . PHP_EOL);
 		$xData = $x['children'];
 		echo "<div class='doc-single' id='$afType-$xName'>";

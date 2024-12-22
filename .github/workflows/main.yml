@@ -23,22 +23,22 @@ jobs:
         run: echo Beginning build
   container:
     runs-on: ubuntu-latest
-    container: debian:11
+    container: debian:12
     steps:
-      - name: Run build
+      - uses: actions/checkout@v4
+      - name: Build Asterisk
         run: |
-          cd /usr/src
+          cd /usr/local/src
           apt-get update -y
-          apt-get install -y wget php php7.4-xml
-          wget https://docs.phreaknet.org/script/phreaknet.sh
+          apt-get install -y wget php php-xml
+          wget https://raw.githubusercontent.com/InterLinked1/phreakscript/refs/heads/master/phreaknet.sh
           chmod +x phreaknet.sh
           ./phreaknet.sh make
-          phreaknet update
-          phreaknet install -t --version=master
-          apt-get install -y php php7.4-xml
+          phreaknet install --version=master
           ls -la
-          cd asterisk-master
-          wget https://raw.githubusercontent.com/InterLinked1/astdocgen/master/astdocgen.php
-          chmod +x astdocgen.php
+      - name: Generate documentation
+        run: |
+          cp *.php /usr/src/asterisk-git
+          cd /usr/src/asterisk-git
           ./astdocgen.php -f doc/core-en_US.xml -x -s > /tmp/astdocgen.xml
           ./astdocgen.php -f /tmp/astdocgen.xml -h > doc/index.html

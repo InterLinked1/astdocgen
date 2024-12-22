@@ -10,8 +10,8 @@ Now, you can easily generate wiki-style HTML documentation for your own custom m
 
 ## Supported Platforms
 
-- Linux/BSD. We primarily test on Debian 10 and 11.
-- Requires a modern version of PHP (>= 7.3)
+- Linux/BSD. We primarily test on Debian 11 and 12.
+- Requires a modern version of PHP (>= 7.3, ideally >= 8.0)
 
 ## Example
 
