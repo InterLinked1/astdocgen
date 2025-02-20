@@ -33,18 +33,8 @@ Run the following commands from the Asterisk source directory:
 
 1. Install a supported version of PHP if you don't have one already. `astdocgen` is not tested on PHP < 7.3.
 
-2. Generate array var dump of XML documentation (this step takes a minute):
-`./astdocgen.php -f doc/core-en_US.xml -x -s > /tmp/astdocgen.xml`
-
-3. Generate HTML documentation from the XML dump:
-`./astdocgen.php -f /tmp/astdocgen.xml -h > doc/index.html`
-
-4. Remove the temporary file:
-`rm /tmp/astdocgen.xml`
-
-Or, if you don't care about what each step is doing, just use this shell one-liner:
-
-`./astdocgen.php -f doc/core-en_US.xml -x -s > /tmp/astdocgen.xml && ./astdocgen.php -f /tmp/astdocgen.xml -h > doc/index.html && rm /tmp/astdocgen.xml`
+2. Generate HTML documentation from the XML documentation:
+`./astdocgen.php -f doc/core-en_US.xml > doc/index.html`
 
 The result is a static HTML webpage with in-page CSS documenting all the applications, functions, and AMI actions in your installed version of Asterisk.
 

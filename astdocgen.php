@@ -8,52 +8,6 @@ function exception_error_handler($errno, $errstr, $errfile, $errline ) {
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 }
 set_error_handler("exception_error_handler"); # stop the script as soon as anything goes wrong. https://stackoverflow.com/a/10530114/
-function xmlObjToArr($obj) { # https://www.php.net/manual/en/book.simplexml.php
-	$namespace = $obj->getDocNamespaces(true); 
-	$namespace[NULL] = NULL; 
-
-	$children = array(); 
-	$attributes = array(); 
-	$name = strtolower((string)$obj->getName()); 
-
-	$text = trim((string)$obj); 
-	if (strlen($text) <= 0) { 
-		$text = NULL; 
-	}
-
-	// get info for all namespaces
-	if(is_object($obj)) {
-		foreach( $namespace as $ns=>$nsUrl ) { 
-			// atributes 
-			$objAttributes = $obj->attributes($ns, true); 
-			foreach( $objAttributes as $attributeName => $attributeValue ) { 
-				$attribName = strtolower(trim((string)$attributeName)); 
-				$attribVal = trim((string)$attributeValue); 
-				if (!empty($ns)) { 
-					$attribName = $ns . ':' . $attribName; 
-				} 
-				$attributes[$attribName] = $attribVal; 
-			} 
-
-			// children 
-			$objChildren = $obj->children($ns, true); 
-			foreach( $objChildren as $childName=>$child ) { 
-				$childName = strtolower((string)$childName); 
-				if( !empty($ns) ) { 
-					$childName = $ns.':'.$childName; 
-				}
-				$children[$childName][] = xmlObjToArr($child); 
-			} 
-		} 
-	} 
-
-	return array( 
-		'name'=>$name, 
-		'text'=>$text, 
-		'attributes'=>$attributes, 
-		'children'=>$children 
-	); 
-}
 function addopt(&$s, &$l, $short, $long, $required, $param) {
 	$suffix = "";
 	if ($required && $param) {
@@ -69,28 +23,16 @@ $shortopts = "";
 $longopts = array();
 $s = &$shortopts;
 $l = &$longopts;
-addopt($s, $l, "x", "xml", false, false);
-addopt($s, $l, "h", "html", false, false);
-addopt($s, $l, "p", "print", false, false);
 addopt($s, $l, "f", "file", true, true);
-addopt($s, $l, "s", "serialize", false, false);
 addopt($s, $l, "", "help", false, false);
 $options = getopt($shortopts, $longopts);
-$optXML = (isset($options['x']) || isset($options['xml']));
-$optHTML = (isset($options['h']) || isset($options['html']));
 $optFile = (isset($options['f']) || isset($options['file']));
-$optSerialize = (isset($options['s']) || isset($options['serialize']));
-$printr = (isset($options['p']) || isset($options['print']));
 $optHelp = isset($options['help']);
-if ($argc < 2 || $optHelp || (!$optXML && !$optHTML && !$printr) || !$optFile) {
+if ($argc < 2 || $optHelp || !$optFile) {
 	printf("%s\n", "Usage: astdocgen [OPTION]... [FILE]...");
-	printf("%s\n\n", "Generate parseable or parsed documentation from Asterisk XML documentation.");
-	printf("  -%s, --%-15s %s\n", "f", "file", "Input file for XML array dump or HTML generation");
-	printf("  -%s, --%-15s %s\n", "h", "html", "Generate HTML documentation from XML array dump and write to STDOUT");
-	printf("  -%s, --%-15s %s\n", "p", "print", "Generate HTML array dump from XML array dump and write to STDOUT");
-	printf("  -%s, --%-15s %s\n", "s", "serialize", "Serialize the generated XML array dump");
-	printf("  -%s, --%-15s %s\n", "x", "xml", "Generate array dump of XML from specified file and write to STDOUT");
-	printf("\n%s\n", "(C) PhreakNet, 2021");
+	printf("%s\n\n", "Generate HTML documentation from Asterisk XML documentation.");
+	printf("  -%s, --%-15s %s\n", "f", "file", "Input file (e.g. doc/core-en_US.xml)");
+	printf("\n%s\n", "(C) PhreakNet, 2021-2025");
 	exit(2);
 }
 $filename = (isset($options['f']) ? $options['f'] : $options['file']);
@@ -98,50 +40,22 @@ if (!file_exists($filename)) {
 	fprintf(STDERR, "Input file does not exist: %s\n", $filename);
 	exit(2);
 }
-if ($optXML) {
-	$xmlFile = file_get_contents($filename);
-	$xmlFile = str_replace("<literal>", "<![CDATA[<literal>", $xmlFile);
-	$xmlFile = str_replace("</literal>", "</literal>]]>", $xmlFile);
-	$xmlFile = str_replace("<replaceable>", "<![CDATA[<replaceable>", $xmlFile);
-	$xmlFile = str_replace("</replaceable>", "</replaceable>]]>", $xmlFile);
-	$xmlFile = str_replace("<filename>", "<![CDATA[<filename>", $xmlFile);
-	$xmlFile = str_replace("</filename>", "</filename>]]>", $xmlFile);
-	$xmlFile = str_replace("<emphasis>", "<![CDATA[<emphasis>", $xmlFile);
-	$xmlFile = str_replace("</emphasis>", "</emphasis>]]>", $xmlFile);
-	$xmlFile = preg_replace("/<variable>([A-Z_]+)<\/variable>/", "<![CDATA[<variable>$1</variable>]]>", $xmlFile); # variable tag used for both single words and nodes. We don't want to parse the markdown words, but do want to parse the nodes.
-	$xml = simplexml_load_string($xmlFile);
-	fwrite(STDERR, "Processing XML - this will take a moment...");
-	$array = xmlObjToArr($xml); # this is really slow, but it properly retains attributes on leaf nodes, respects CDATA, etc.
-	fwrite(STDERR, PHP_EOL);
-	fwrite(STDERR, "Dumping XML...");
-	if ($optSerialize)
-		echo '<?php $array = ' . var_export($array, true) . ';?>';
-	else
-		print_r($array);
-	fwrite(STDERR, PHP_EOL);
-	exit(0);
-}
-if ($optSerialize) {
-	fprintf(STDERR, "Serialize option is incompatible with HTML option" . PHP_EOL);
+$xmlFile = file_get_contents($filename);
+$xmlFile = str_replace("<literal>", "<![CDATA[<literal>", $xmlFile);
+$xmlFile = str_replace("</literal>", "</literal>]]>", $xmlFile);
+$xmlFile = str_replace("<replaceable>", "<![CDATA[<replaceable>", $xmlFile);
+$xmlFile = str_replace("</replaceable>", "</replaceable>]]>", $xmlFile);
+$xmlFile = str_replace("<filename>", "<![CDATA[<filename>", $xmlFile);
+$xmlFile = str_replace("</filename>", "</filename>]]>", $xmlFile);
+$xmlFile = str_replace("<emphasis>", "<![CDATA[<emphasis>", $xmlFile);
+$xmlFile = str_replace("</emphasis>", "</emphasis>]]>", $xmlFile);
+$xmlFile = preg_replace("/<variable>([A-Z_]+)<\/variable>/", "<![CDATA[<variable>$1</variable>]]>", $xmlFile); # variable tag used for both single words and nodes. We don't want to parse the markdown words, but do want to parse the nodes.
+$xml = simplexml_load_string($xmlFile);
+if (!$xml) {
+	fprintf(STDERR, "Failed to process XML documentation");
 	exit(2);
-}
-include($filename);
-if ($printr) { # HTML array dump
-	if (!isset($array) || !is_array($array)) {
-		fprintf(STDERR, "Array not found" . PHP_EOL);
-		exit(2);
-	}
-	fwrite(STDERR, "Dumping XML dump to HTML..." . PHP_EOL);
-	echo "<pre>";
-	print_r($array);
-	echo "</pre>";
-	exit(0);
 }
 
-if (!isset($array) || !is_array($array)) {
-	fprintf(STDERR, "Specified input file does not contain XML dump" . PHP_EOL);
-	exit(2);
-}
 fwrite(STDERR, "Generating HTML..." . PHP_EOL);
 
 echo "<!doctype html><html lang='en'><head><meta charset='utf-8'><title>Asterisk Docs</title>";
@@ -326,20 +240,14 @@ function shouldSkip($name) {
 	return false;
 }
 
-$docs = $array['children'];
-if (!isset($docs['application'])) {
-	fprintf(STDERR, "Couldn't find application?\n");
-	fprintf(STDERR, "%s\n", print_r(array_keys($docs), true));
-	exit(-1);
-}
-$module = isset($docs['module']) ? $docs['module'] : array();
-$apps = $docs['application'];
-$funcs = $docs['function'];
-$info = $docs['info']; /*! \todo do something with info - these are all tech/channel related things */
-$manager = $docs['manager'];
-$managerevent = $docs['managerevent']; /*! \todo needs xpointer support */
-$configinfo = $docs['configinfo']; /*! \todo needs xpointer support */
-$agi = $docs['agi'];
+$module = $xml->module;
+$apps = $xml->application;
+$funcs = $xml->function;
+$info = $xml->info; /*! \todo do something with info - these are all tech/channel related things */
+$manager = $xml->manager;
+$managerevent = $xml->managerEvent; /*! \todo needs xpointer support */
+$configinfo = $xml->configInfo; /*! \todo needs xpointer support */
+$agi = $xml->agi;
 
 $allDocs = array(
 	'Configuration' => $configinfo,
@@ -358,8 +266,12 @@ echo "<div id='docmenu'>";
 echo "<ul>";
 foreach($allDocs as $catName => $cat) {
 	$catList = array();
+	if (empty($cat)) {
+		fprintf(STDERR, "Category $catName is empty?\n");
+		exit(2);
+	}
 	foreach ($cat as $c) {
-		$name = $c['attributes']['name'];
+		$name = $c->attributes()->name;
 		if (shouldSkip($name)) {
 			continue;
 		}
@@ -385,22 +297,17 @@ echo "</div>";
 echo "<div id='docbody'>";
 echo "<table><tr><th>Module</th><th>Support Level</th><th>Deprecated In</th><th>Removed In</th><th>Dependencies</th></tr>";
 foreach ($module as $mod) {
-	$name = $mod['attributes']['name'];
+	$name = $mod->attributes()->name;
 	if (shouldSkip($name)) {
 		continue;
 	}
 	$dependencies = array();
-	$supportLevel = (isset($mod['children']['support_level'][0]['text']) ? $mod['children']['support_level'][0]['text'] : '');
-	$deprecated = (isset($mod['children']['deprecated_in'][0]['text']) ? $mod['children']['deprecated_in'][0]['text'] : '');
-	$removed = (isset($mod['children']['removed_in'][0]['text']) ? $mod['children']['removed_in'][0]['text'] : '');
-	if (isset($mod['children']['depend'])) {
-		foreach($mod['children']['depend'] as $d) {
-			$dependencies[] = $d['text'];
-		}
-	}
-	if (isset($mod['children']['depend'])) {
-		foreach($mod['children']['depend'] as $d) {
-			$dependencies[] = $d['text'];
+	$supportLevel = (isset($mod->support_level) ? $mod->support_level : "");
+	$deprecated = (isset($mod->deprecated_in) ? $mod->deprecated_in : "");
+	$removed = (isset($mod->removed_in) ? $mod->removed_in : "");
+	if (isset($mod->depend)) {
+		foreach($mod->depend as $d) {
+			$dependencies[] = $d;
 		}
 	}
 	echo "<tr><td>$name</td><td>$supportLevel</td><td>$deprecated</td><td>$removed</td><td>" . implode(', ', $dependencies) . "</td>";
@@ -409,13 +316,12 @@ echo "</table>";
 foreach($allDocs as $afTypeFull => $appfunc) {
 	foreach ($appfunc as $x) {
 		$afType = strtolower($afTypeFull);
-		$xName = $x['attributes']['name'];
+		$xName = $x->attributes()->name;
 		if (shouldSkip($xName)) {
 			fwrite(STDERR, "Skipping $afType $xName..." . PHP_EOL);
 			continue;
 		}
 		fwrite(STDERR, "Processing $afType $xName..." . PHP_EOL);
-		$xData = $x['children'];
 		echo "<div class='doc-single' id='$afType-$xName'>";
 		$hyperlink = "https://wiki.asterisk.org/wiki/display/AST/Asterisk+18+${afTypeFull}_$xName";
 		$title = $xName;
@@ -423,8 +329,8 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 			$title = strtoupper($title);
 		echo "<h2><a href='$hyperlink' target='_blank'>$title" . ($afType === "application" || $afType === "function" ? "()" : "") . "</a></h2>";
 		echo "<h3>Synopsis</h3>";
-		if (isset($xData['synopsis'])) {
-			$synopsis = $xData['synopsis'][0]['text'];
+		if (isset($x->synopsis)) {
+			$synopsis = trim($x->synopsis);
 			if ($afType === "configuration") {
 				echo "<h3>$synopsis</h3>";
 				echo "<p>This configuration documentation is for functionality provided by <code>$xName</code>.</p>";
@@ -433,37 +339,37 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 			}
 		}
 		echo "<h3>Description</h3>";
-		if (isset($xData['description'][0]['children'])) {
-			$description = $xData['description'][0]['children'];
-			if (isset($description['para'])) {
-				$descPara = $description['para'];
-				foreach ($descPara as $para) {
-					echo "<p>" . $para['text'] . "</p>";
+		if (isset($x->description)) {
+			$description = $x->description;
+			if (isset($description->para)) {
+				foreach ($description->para as $para) {
+					echo "<p>" . trim($para) . "</p>";
 				}
 			}
-			if (isset($description['note'])) {
-				foreach ($description['note'] as $note) {
+			if (isset($description->note)) {
+				foreach ($description->note as $note) {
 					echo "<div class='note'>";
-					foreach ($note['children']['para'] as $para) {
-						echo "<p>" . $para['text'] . "</p>";
+					foreach ($note->para as $para) {
+						echo "<p>" . trim($para) . "</p>";
 					}
 					echo "</div>";
 				}
 			}
-			if (isset($description['warning'])) {
-				foreach ($description['warning'] as $warning) {
+			if (isset($description->warning)) {
+				foreach ($description->warning as $warning) {
 					echo "<div class='warning'>";
-					foreach ($warning['children']['para'] as $para) {
-						echo "<p>" . $para['text'] . "</p>";
+					foreach ($warning->para as $para) {
+						echo "<p>" . trim($para) . "</p>";
 					}
 					echo "</div>";
 				}
 			}
-			if (isset($description['example'])) {
-				foreach ($description['example'] as $example) {
+
+			if (isset($description->example)) {
+				foreach ($description->example as $example) {
 					echo "<div class='example'>";
-					$title = $example['attributes']['title'];
-					$ex = $example['text'];
+					$title = $example->attributes()->title;
+					$ex = $example[0];
 					echo "<b>Example: $title</b>";
 					echo "<pre>";
 					$ex = explode("\n", $ex);
@@ -478,65 +384,68 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 					echo "</div>";
 				}
 			}
-			if (isset($description['variablelist'])) {
+			if (isset($description->variablelist)) {
 				echo "<ul>";
-				foreach ($description['variablelist'][0]['children']['variable'] as $variable) {
-					$varName = $variable['attributes']['name'];
-					echo "<li><code>$varName</code>";
-					if (isSet($variable['children']['para'])) {
-						echo " - ";
-						foreach ($variable['children']['para'] as $para) {
-							echo $para['text'];
+				foreach ($description->variablelist as $variableOuter) {
+					foreach ($variableOuter as $variable) {
+						$varName = $variable->attributes()->name;
+						echo "<li><code>$varName</code>";
+						if (isset($variable->para)) {
+							echo " - ";
+							foreach ($variable->para as $para) {
+								echo trim($para);
+							}
 						}
-					}
-					if (isset($variable['children']['value'])) {
-						echo "<ul>";
-						foreach ($variable['children']['value'] as $varvalue) {
-							$vvName = $varvalue['attributes']['name'];
-							$vvText = $varvalue['text'];
-							echo "<li>$vvName" . ($vvText && strlen($vvText) > 0 ? " - " . $vvText : "") . "</li>";
+						if (isset($variable->value)) {
+							echo "<ul>";
+							foreach ($variable->value as $varvalue) {
+								$vvName = $varvalue->attributes()->name;
+								$vvText = trim($varvalue);
+								echo "<li>$vvName" . ($vvText && strlen($vvText) > 0 ? " - " . $vvText : "") . "</li>";
+							}
+							echo "</ul>";
 						}
-						echo "</ul>";
+						echo "</li>";
 					}
-					echo "</li>";
 				}
 				echo "</ul>";
 			}
 		}
-		if (isset($xData['syntax'][0]['children'])) {
-			$syntax = $xData['syntax'][0]['children'];
+		if (isset($x->syntax)) {
+			$syntax = $x->syntax;
 			# AMI stuff requires xpointer, not supported yet.
 			if ($afType === "agicommand") {
 				echo "<h3>Syntax</h3>";
 				echo "<p class='syntaxbar'><code>" . strtoupper($xName);
-				if (isset($syntax['parameter'])) {
-					foreach ($syntax['parameter'] as $parameter) {
-						if (isset($parameter['children']['argument'])) {
-							foreach ($parameter['children']['argument'] as $argument) {
-								$argName = $argument['attributes']['name'];
+				if (isset($syntax->parameter)) {
+					foreach ($syntax->parameter as $parameter) {
+						if (isset($parameter->argument)) {
+							foreach ($parameter->argument as $argument) {
+								$argName = $argument->attributes()->name;
 								echo strtoupper($argName);
 							}
 						} else {
-							$argName = $parameter['attributes']['name'];
+							$argName = $parameter->attributes()->name;
 							echo " " . strtoupper($argName);
 						}
 					}
 				}
 				echo "</code></p>";
-			} else if (isset($xData['syntax'][0]['children']['parameter'])) { # apps/funcs...
-				$parameters = $syntax['parameter'];
+			} else if (isset($syntax->parameter)) { # apps/funcs...
+				$parameters = $syntax->parameter;
 				echo "<h3>Syntax</h3>";
 				echo "<p class='syntaxbar'><code>$xName(";
 				$c = 0;
 				$optional = 0;
 				foreach ($parameters as $parameter) {
 					$argsep = ",";
-					if (isset($parameter['children']['argument'])) { # expand args
-						$argsep = (isset($parameter['attributes']['argsep']) ? $parameter['attributes']['argsep'] : ",");
-						foreach ($parameter['children']['argument'] as $argument) {
-							$argName = $argument['attributes']['name'];
-							$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
-							$multiple = (isset($argument['attributes']['multiple']) && $argument['attributes']['multiple'] === "true");
+					if (isset($parameter->argument)) { # expand args
+						$argsep = (isset($parameter->attributes()->argsep) ? $parameter->attributes()->argsep : ",");
+						foreach ($parameter->argument as $argument) {
+							$argName = $argument->attributes()->name;
+							/* Need to use ==, not === */
+							$argRequired = (isset($argument->attributes()->required) && $argument->attributes()->required == "true");
+							$multiple = (isset($argument->attributes()->multiple) && $argument->attributes()->multiple == "true");
 							if (!$argRequired)
 								$optional++;
 							if ($c > 0)
@@ -554,8 +463,8 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 							$c++;
 						}
 					} else { /* this is for both options and other arguments */
-						$argName = $parameter['attributes']['name'];
-						$argRequired = (isset($parameter['attributes']['required']) && $parameter['attributes']['required'] === "true");
+						$argName = $parameter->attributes()->name;
+						$argRequired = (isset($parameter->attributes()->required) && $parameter->attributes()->required == "true");
 						if (!$argRequired)
 							$optional++;
 						if ($c > 0)
@@ -573,46 +482,46 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 				echo str_repeat("]", $optional);
 				echo ")</code></p>";
 			}
-			if (isset($syntax['parameter'])) {
+			if (isset($syntax->parameter)) {
 				echo "<h4>Arguments</h4>";
 				echo "<ul>";
-				$parameters = $syntax['parameter'];
+				$parameters = $syntax->parameter;
 				foreach ($parameters as $parameter) {
-					$paramName = $parameter['attributes']['name'];
-					$param = $parameter['children'];
+					$paramName = $parameter->attributes()->name;
+					$param = $parameter;
 					echo "<li><code>$paramName</code>";
-					if (isset($param['argument'])) {
+					if (isset($parameter->argument)) {
 						echo "<ul>";
-						foreach ($param['argument'] as $argument) {
-							$argName = $argument['attributes']['name'];
-							$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
+						foreach ($param->argument as $argument) {
+							$argName = $argument->attributes()->name;
+							$argRequired = (isset($argument->attributes()->required) && $argument->attributes()->required == "true");
 							echo "<li><code>$argName</code>";
-							if (isset($argument['children']['para'][0]['text'])) {
+							if (isset($argument->para)) {
 								echo " - ";
-								foreach ($argument['children']['para'] as $para) {
-									echo $para['text'] . "<br>";
+								foreach ($argument->para as $para) {
+									echo trim($para) . "<br>";
 								}
 							}
 							echo "</li>";
 						}
 						echo "</ul>";
-					} else if (isset($param['optionlist'])) {
+					} else if (isset($param->optionlist)) {
 						echo "<ul>";
-						foreach ($param['optionlist'][0]['children']['option'] as $option) {
-							$optName = $option['attributes']['name'];
-							$argsep = (isset($option['attributes']['argsep']) ? $option['attributes']['argsep'] : " <ERROR> ");
-							$optRequired = (isset($option['attributes']['required']) && $option['attributes']['required'] === "true");
+						foreach ($param->optionlist->option as $option) {
+							$optName = $option->attributes()->name;
+							$argsep = (isset($option->attributes()->argsep) ? $option->attributes()->argsep : " <ERROR> ");
+							$optRequired = (isset($option->attributes()->required) && $option->attributes()->required == "true");
 							echo "<li><code>$optName";
-							if (isset($option['children']['argument'][0]['attributes']['name'])) {
+							if (isset($option->argument->attributes()->name)) {
 								echo "( ";
 								$c = 0;
-								foreach ($option['children']['argument'] as $arg) {
+								foreach ($option->argument as $arg) {
 									if ($c > 0)
 										echo $argsep;
-									$argRequired = (isset($arg['attributes']['required']) && $arg['attributes']['required'] === "true");
+									$argRequired = (isset($arg->attributes()->required) && $arg->attributes()->required == "true");
 									if ($argRequired)
 										echo "<b>";
-									echo $arg['attributes']['name'];
+									echo $arg->attributes()->name;
 									if ($argRequired)
 										echo "</b>";
 									$c++;
@@ -620,30 +529,30 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 								echo " )";
 							}
 							echo "</code>";
-							if (isset($option['children']['para'][0]['text'])) {
+							if (isset($option->para)) {
 								echo " - ";
-								foreach ($option['children']['para'] as $para) {
-									echo $para['text'] . "<br>";
+								foreach ($option->para as $para) {
+									echo $para . "<br>";
 								}
 							}
-							if (isset($option['children']['variablelist'][0]['children']['variable'])) {
+							if (isset($option->variablelist)) {
 								echo "<ul>";
-								foreach ($option['children']['variablelist'][0]['children']['variable'] as $var) {
-									$varName = $var['attributes']['name'];
+								foreach ($option->variablelist->variable as $var) {
+									$varName = $var->attributes()->name;
 									echo "<li><code>$varName</code>";
-									if (isset($var['children']['para'])) {
+									if (isset($var->para)) {
 										echo " - ";
-										foreach ($var['children']['para'] as $para) {
-											echo $para['text'] . "<br>";
+										foreach ($var->para as $para) {
+											echo trim($para) . "<br>";
 										}
 									}
-									if (isset($var['children']['value'])) {
+									if (isset($var->value)) {
 										echo "<ul>";
-										foreach ($var['children']['value'] as $value) {
-											$valueName = trim($value['attributes']['name']);
-											$default = isset($value['attributes']['default']);
+										foreach ($var->value as $value) {
+											$valueName = trim($value->attributes()->name);
+											$default = isset($value->attributes()->default);
 											$valueName = htmlspecialchars($valueName);
-											echo "<li>" . strtoupper($valueName) . ($value['text'] && strlen($value['text']) > 0 ? " - " . $value['text'] : '');
+											echo "<li>" . strtoupper($valueName) . ($value && strlen($value) > 0 ? " - " . trim($value) : '');
 											if ($default)
 												echo " default: (true)";
 											echo "</li>";
@@ -654,13 +563,13 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 								}
 								echo "</ul>";
 							}
-							if (isset($option['children']['argument'])) {
+							if (isset($option->argument)) {
 								echo "<ul>";
-								foreach ($option['children']['argument'] as $argument) {
-									$argName = $argument['attributes']['name'];
-									$argRequired = (isset($argument['attributes']['required']) && $argument['attributes']['required'] === "true");
-									$argParams = (isset($argument['attributes']['hasparams']) && $argument['attributes']['required'] === "true");
-									$argsep = (isset($argument['attributes']['argsep']) ? $argument['attributes']['argsep'] : " <ERROR> ");
+								foreach ($option->argument as $argument) {
+									$argName = $argument->attributes()->name;
+									$argRequired = (isset($argument->attributes()->required) && $argument->attributes()->required == "true");
+									$argParams = (isset($argument->attributes()->hasparams) && $argument->attributes()->hasparams == "true");
+									$argsep = (isset($argument->attributes()->argsep) ? $argument->attributes()->argsep : " <ERROR> ");
 									echo "<li><code>";
 									if ($argRequired)
 										echo "<b>";
@@ -670,18 +579,18 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 									if ($argParams)
 										echo "( params )";
 									echo "</code>";
-									if (isset($argument['children']['para'][0]['text'])) {
+									if (isset($argument->para)) {
 										echo " - ";
-										foreach ($argument['children']['para'] as $para) {
-											echo $para['text'] . "<br>";
+										foreach ($argument->para as $para) {
+											echo trim($para) . "<br>";
 										}
 									}
-									if (isset($argument['children']['argument'][0])) {
+									if (isset($argument->argument)) {
 										echo "<ul>";
-										foreach ($argument['children']['argument'] as $subarg) {
-											$subargName = $subarg['attributes']['name'];
-											$multiple = (isset($subarg['attributes']['required']) && $subarg['attributes']['required'] === "true");
-											$argRequired = (isset($subarg['attributes']['required']) && $subarg['attributes']['required'] === "true");
+										foreach ($argument->argument as $subarg) {
+											$subargName = $subarg->attributes()->name;
+											$multiple = (isset($subarg->attributes()->subarg) && $subarg->attributes()->subarg == "true");
+											$argRequired = (isset($subarg->attributes()->required) && $subarg->attributes()->required == "true");
 											echo "<li><code>";
 											if ($argRequired)
 												echo "<b>";
@@ -699,19 +608,19 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 								}
 								echo "</ul>";
 							}
-							/* options can contain an enumlist */
-							if (isset($option['children']['enumlist'])) {
-								foreach ($option['children']['enumlist'] as $enumlist) {
+							/* option can contain an enumlist */
+							if (isset($option->enumlist)) {
+								foreach ($option->enumlist as $enumlist) {
 									print_enum_list($enumlist);
 								}
 							}
 							echo "</li>";
 						}
 						echo "</ul>";
-					} else if (isset($param['para'][0])) {
+					} else if (isset($param->para)) {
 						echo " - ";
-						foreach ($param['para'] as $para) {
-							echo $para['text'] . "<br>";
+						foreach ($param->para as $para) {
+							echo trim($para) . "<br>";
 						}
 						/*
 						 * as demonstrated by func_frame_drop, the current method of XML parsing has some serious disadvantages, namely that order is not
@@ -721,8 +630,8 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 						 * However, until we have a better, improved way of XML parsing that preserves order, we should at least check for multiple children.
 						 * Eventually, once we have an order-preserving parse, we can just call a callback function to print out each kind of element.
 						 */
-						if (isset($param['enumlist'][0]['children']['enum'])) { # xpointer not supported at this time
-							foreach ($param['enumlist'] as $enumlist) {
+						if (isset($param->enumlist)) { # xpointer not supported at this time
+							foreach ($param->enumlist as $enumlist) {
 								print_enum_list($enumlist);
 							}
 						}
@@ -732,28 +641,28 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 			}
 			echo "</ul>";
 		}
-		if (isset($xData['configfile'])) {
+		if (isset($x->configFile)) {
 			echo "<h3>Configuration Option Reference</h3>";
-			foreach ($xData['configfile'] as $cf) {
-				$cfName = $cf['attributes']['name'];
+			foreach ($x->configFile as $cf) {
+				$cfName = $cf->attributes()->name;
 				echo "<h3>$cfName</h3>";
-				foreach ($cf['children']['configobject'] as $configobj) {
-					$coName = $configobj['attributes']['name'];
+				foreach ($cf->configObject as $configobj) {
+					$coName = $configobj->attributes()->name;
 					echo "<h4>$coName</h4>";
-					if (isset($configobj['children']['synopsis'])) {
-						echo "<p>" . $configobj['children']['synopsis'][0]['text'] . "</p>";
+					if (isset($configobj->synopsis)) {
+						echo "<p>" . $configobj->synopsis . "</p>";
 					}
-					if (isset($configobj['children']['configoption'])) {
+					if (isset($configobj->configOption)) {
 						echo "<table>";
 						echo "<tr><th>Option Name</th><th>Type</th><th>Default Value</th><th>Regular Expression</th><th>Description</th></tr>";
-						foreach ($configobj['children']['configoption'] as $cfgOpt) {
+						foreach ($configobj->configOption as $cfgOpt) {
 							echo "<tr>";
-							echo "<td>" . $cfgOpt['attributes']['name'] . "</td>";
+							echo "<td>" . $cfgOpt->attributes()->name . "</td>";
 							/*! \todo XML array doesn't contain these attributes? */
 							echo "<td></td>";
 							echo "<td></td>";
 							echo "<td></td>";
-							echo "<td>" . $cfgOpt['children']['synopsis'][0]['text'] . "</td>";
+							echo "<td>" . $cfgOpt->synopsis . "</td>";
 							echo "</tr>";
 						}
 						echo "</table>";
@@ -761,12 +670,12 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 				}
 			}
 		}
-		if (isset($xData['see-also'][0])) {
+		if (isset($x->{'see-also'})) {
 			echo "<h3>See Also</h3>";
 			echo "<ul>";
-			foreach ($xData['see-also'][0]['children']['ref'] as $seealso) {
-				$type = $seealso['attributes']['type'];
-				$name = $seealso['text'];
+			foreach ($x->{'see-also'}->ref as $seealso) {
+				$type = $seealso->attributes()->type;
+				$name = $seealso;
 				$linkName = $type;
 				switch($type) {
 					case 'manager':
@@ -797,20 +706,20 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 		echo PHP_EOL;
 	}
 }
-function print_enum_list(array $enumlist) {
+function print_enum_list($enumlist) {
 	echo "<ul>";
-	foreach ($enumlist['children']['enum'] as $enum) {
+	foreach ($enumlist->enum as $enum) {
 		echo "<li><code>";
-		echo $enum['attributes']['name'];
+		echo $enum->attributes()->name;
 		echo "</code>";
-		if (isset($enum['children']['para'][0]['text'])) {
+		if (isset($enum->para) && strlen($enum->para) > 0) {
 			echo " - ";
-			foreach ($enum['children']['para'] as $para) {
-				echo $para['text'] . "<br>";
+			foreach ($enum->para as $para) {
+				echo trim($para) . "<br>";
 			}
 		}
-		if (isset($enum['children']['enumlist'])) {
-			foreach ($enum['children']['enumlist'] as $enumlist) {
+		if (isset($enum->enumlist)) {
+			foreach ($enum->enumlist as $enumlist) {
 				print_enum_list($enumlist);
 			}
 		}
