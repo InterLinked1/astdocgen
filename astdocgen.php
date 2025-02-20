@@ -313,6 +313,15 @@ foreach ($module as $mod) {
 	echo "<tr><td>$name</td><td>$supportLevel</td><td>$deprecated</td><td>$removed</td><td>" . implode(', ', $dependencies) . "</td>";
 }
 echo "</table>";
+$asteriskDocsPrefix = array(
+	/* Convert the old wiki prefix to the new docs prefix */
+	'Configuration' => 'Module_Configuration',
+	'Application' => 'Dialplan_Applications',
+	'Function' => 'Dialplan_Functions',
+	'ManagerAction' => 'AMI_Actions',
+	'ManagerEvent' => 'AMI_Events',
+	'AgiCommand' => 'AGI_Commands',
+);
 foreach($allDocs as $afTypeFull => $appfunc) {
 	foreach ($appfunc as $x) {
 		$afType = strtolower($afTypeFull);
@@ -323,7 +332,7 @@ foreach($allDocs as $afTypeFull => $appfunc) {
 		}
 		fwrite(STDERR, "Processing $afType $xName..." . PHP_EOL);
 		echo "<div class='doc-single' id='$afType-$xName'>";
-		$hyperlink = "https://wiki.asterisk.org/wiki/display/AST/Asterisk+18+${afTypeFull}_$xName";
+		$hyperlink = "https://docs.asterisk.org/Latest_API/API_Documentation/" . $asteriskDocsPrefix[$afTypeFull] . "/" . $xName . "/";
 		$title = $xName;
 		if ($afType === "agicommand")
 			$title = strtoupper($title);
